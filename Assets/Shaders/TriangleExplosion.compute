@@ -1,0 +1,43 @@
+#pragma kernel UpdateTriangles
+
+struct TriangleState
+{
+    float3 offset;
+    float3 velocity;
+    float lifetime;
+    uint active;
+};
+
+RWStructuredBuffer<TriangleState> _TriangleStates;
+
+float3 _Acceleration;
+float _DeltaTime;
+int _TriangleCount;
+
+[numthreads(64, 1, 1)]
+void UpdateTriangles(uint3 id : SV_DispatchThreadID)
+{
+    uint triangleIndex = id.x;
+    if (triangleIndex >= (uint)_TriangleCount)
+    {
+        return;
+    }
+
+    TriangleState state = _TriangleStates[triangleIndex];
+    if (state.active == 0u)
+    {
+        return;
+    }
+
+    state.velocity += _Acceleration * _DeltaTime;
+    state.offset += state.velocity * _DeltaTime;
+    state.lifetime -= _DeltaTime;
+
+    if (state.lifetime <= 0.0f)
+    {
+        state.lifetime = 0.0f;
+        state.active = 0u;
+    }
+
+    _TriangleStates[triangleIndex] = state;
+}
